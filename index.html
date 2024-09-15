@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ragnarok Online MVP Guessing Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: url('https://i.pinimg.com/originals/75/4b/d6/754bd604a5857a39bce97dbf3acbade4.jpg') no-repeat center center fixed;
+            background-size: cover;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 10px;
+        }
+        #game-container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        #guess-input {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+            margin: 20px 0;
+        }
+        #clues-container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        #clues {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            flex: 1;
+        }
+        .clue-box {
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            opacity: 0; /* Initial opacity for animation */
+            animation: fadeIn 0.5s forwards; /* Apply animation */
+        }
+        .green {
+            background-color: #4CAF50;
+            color: #fff;
+        }
+        .red {
+            background-color: #f44336;
+            color: #fff;
+        }
+        .character-image {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+        .autocomplete-items {
+            position: absolute;
+            border: 1px solid #d4d4d4;
+            background-color: #fff;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 99;
+            width: calc(80% - 22px);
+            left: 10%;
+            top: 75px;
+        }
+        .autocomplete-item {
+            padding: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        .autocomplete-item img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            margin-right: 10px;
+            border-radius: 5px;
+        }
+        .autocomplete-item:hover {
+            background-color: #e9e9e9;
+        }
+        #status-indicators {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin: 5px;
+            border-radius: 5px;
+        }
+        .indicator-correct {
+            background-color: #4CAF50;
+        }
+
+        .indicator-incorrect {
+            background-color: #f44336;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+    <h1>Rodle</h1>
+    <div id="game-container">
+        <input type="text" id="guess-input" placeholder="Type MVP name...">
+        <div id="clues-container">
+            <img id="character-image" src="" alt="MVP Image" class="character-image" style="display: none;">
+            <div id="all-guesses"></div>
+        </div>
+        <div id="status-indicators">
+            <span class="status-indicator indicator-correct"></span> Correct
+            <span class="status-indicator indicator-incorrect"></span> Incorrect
+        </div>
+    </div>
+    <script>
+        // MVP Data (Pre-Renewal)
+        var characters = [
+        {
+                name: "Amdarias",
+                hp: 3283990,
+                race: "Brute",
+                property: "Fire",
+                size: "Large",
+                respawn_time: "None",
+                image: "https://file5s.ratemyserver.net/mobs/2476.gif"
+            },
+            {
+                name: "Amon Ra",
+                hp: 1214138,
+                race: "Demi-Human",
+                property: "Earth",
+                size: "Large",
+                respawn_time: "65",
+                image: "https://file5s.ratemyserver.net/mobs/1511.gif"
+            },
+            {
+                name: "Assassin Cross Eremes",
+                hp: 1411230,
+                race: "Demi-Human",
+                property: "Poison",
+                size: "Medium",
+                respawn_time: "115",
+                image: "https://file5s.ratemyserver.net/mobs/1647.gif"
+            },
+            {
+                name: "Atroce",
+                hp: 1008420,
+                race: "Brute",
+                property: "Shadow",
+                size: "Large",
+                respawn_time: "185",
+                image: "https://file5s.ratemyserver.net/mobs/1785.gif"
+            },
+            {
+                name: "Bacsojin",
+                hp: 253221,
+                race: "Demi-Human",
+                property: "Wind",
+                size: "Large",
+                respawn_time: "120",
+                image: "https://file5s.ratemyserver.net/mobs/1630.gif"
+            },
+            {
+                name: "Baphomet",
+                hp: 668000,
+                race: "Demon",
+                property: "Shadow",
+                size: "Large",
+                respawn_time: "125",
+                image: "https://file5s.ratemyserver.net/mobs/1039.gif"
+            },
+            {
+                name: "Beelzebub",
+                hp: 6666666,
+                race: "Demon",
+                property: "Ghost",
+                size: "Small",
+                respawn_time: "725",
+                image: "https://file5s.ratemyserver.net/mobs/1873.gif"
+            },
+            {
+                name: "Boitata",
+                hp: 1283990,
+                race: "Formless",
+                property: "Fire",
+                size: "Large",
+                respawn_time: "125",
+                image: "https://file5s.ratemyserver.net/mobs/2068.gif"
+            },
+            {
+                name: "Buwaya",
+                hp: 4090365,
+                race: "Dragon",
+                property: "Water",
+                size: "Large",
+                respawn_time: "None",
+                image: "https://file5s.ratemyserver.net/mobs/2319.gif"
+            },
+            {
+                name: "Champion Chen",
+                hp: 4249350,
+                race: "Demon",
+                property: "Water",
+                size: "Medium",
+                respawn_time: "115",
+                image: "https://file5s.ratemyserver.net/mobs/2238.gif"
+            },
+            {
+                name: "Clown Alphoccio",
+                hp: 3894278,
+                race: "Demi-Human",
+                property: "Wind",
+                size: "Medium",
+                respawn_time: "115",
+                image: "https://file5s.ratemyserver.net/mobs/2240.gif"
+            },
+            {
+                name: "Creator Flamel",
+                hp: 4230000,
+                race: "Demi-Human",
+                property: "Fire",
+                size: "Medium",
+                respawn_time: "115",
+                image: "https://file5s.ratemyserver.net/mobs/2236.gif"
+            },
+            {
+                name: "Dark Lord",
+                hp: 720000,
+                race: "Demon",
+                property: "Undead",
+                size: "Large",
+                respawn_time: "65",
+                image: "https://file5s.ratemyserver.net/mobs/1272.gif"
+            },
+            {
+                name: "Detale",
+                hp: 960000,
+                race: "Dragon",
+                property: "Shadow",
+                size: "Large",
+                respawn_time: "185",
+                image: "https://file5s.ratemyserver.net/mobs/1719.gif"
+            },
+            {
+                name: "Doppelganger",
+                hp: 249000,
+                race: "Demon",
+                property: "Shadow",
+                size: "Medium",
+                respawn_time: "125",
+                image: "https://file5s.ratemyserver.net/mobs/1046.gif"
+            },
+            {
+                name: "Dracula",
+                hp: 320096,
+                race: "Demon",
+                property: "Shadow",
+                size: "Large",
+                respawn_time: "65",
+                image: "https://file5s.ratemyserver.net/mobs/1389.gif"
+            },
+            {
+                name: "Drake",
+                hp: 326666,
+                race: "Undead",
+                property: "Undead",
+                size: "Medium",
+                respawn_time: "125",
+                image: "https://file5s.ratemyserver.net/mobs/1112.gif"
+            },
+            {
+                name: "Evil Snake Lord",
+                hp: 254993,
+                race: "Brute",
+                property: "Ghost",
+                size: "Large",
+                respawn_time: "100",
+                image: "https://file5s.ratemyserver.net/mobs/1418.gif"
+            },
+            {
+                name: "Fallen Bishop",
+                hp: 3333333,
+                race: "Demon",
+                property: "Shadow",
+                size: "Medium",
+                respawn_time: "125",
+                image: "https://file5s.ratemyserver.net/mobs/1871.gif"
+            },
+            {
+                name: "Garm",
+                hp: 197000,
+                race: "Brute",
+                property: "Water",
+                size: "Large",
+                respawn_time: "125",
+                image: "https://file5s.ratemyserver.net/mobs/1252.gif"
+            },
+            {
+                name: "Gloom Under Night",
+                hp: 2298000,
+                race: "Formless",
+                property: "Ghost",
+                size: "Large",
+                respawn_time: "305",
+                image: "https://file5s.ratemyserver.net/mobs/1768.gif"
+            },
+            {
+                name: "Gold Queen Scaraba",
+                hp: 6441600,
+                race: "Insect",
+                property: "Earth",
+                size: "Large",
+                respawn_time: "120",
+                image: "https://file5s.ratemyserver.net/mobs/2165.gif"
+            },
+            {
+                name: "Golden Thief Bug",
+                hp: 126000,
+                race: "Insect",
+                property: "Fire",
+                size: "Large",
+                respawn_time: "60",
+                image: "https://file5s.ratemyserver.net/mobs/1086.gif"
+            },
+            {
+                name: "Gopinich",
+                hp: 299321,
+                race: "Brute",
+                property: "Earth",
+                size: "Large",
+                respawn_time: "125",
+                image: "https://file5s.ratemyserver.net/mobs/1885.gif"
+            },
+            {
+                name: "Gypsy Trentini",
+                hp: 3894278,
+                race: "Demi-Human",
+                property: "Wind",
+                size: "Medium",
+                respawn_time: "115",
+                image: "https://file5s.ratemyserver.net/mobs/2241.gif"
+            },
+            {
+                name: "High Priest Magaleta",
+                hp: 1092910	,
+                race: "Demi-Human",
+                property: "Holy",
+                size: "Medium",
+                respawn_time: "115",
+                image: "https://file5s.ratemyserver.net/mobs/1649.gif"
+            },
+            {
+                name: "High Wizard Katrinn",
+                hp: 1069920	,
+                race: "Demi-Human",
+                property: "Ghost",
+                size: "Medium",
+                respawn_time: "115",
+                image: "https://file5s.ratemyserver.net/mobs/1651.gif"
+            },
+            {
+                name: "Ifrit",
+                hp: 7700000	,
+                race: "Formless",
+                property: "Fire",
+                size: "Large",
+                respawn_time: "635",
+                image: "https://file5s.ratemyserver.net/mobs/1832.gif"
+            },
+            {
+                name: "Incantation Samurai",
+                hp: 218652	,
+                race: "Demi-Human",
+                property: "Shadow",
+                size: "Large",
+                respawn_time: "95",
+                image: "https://file5s.ratemyserver.net/mobs/1492.gif"
+            },
+            {
+                name: "Kiel D-01",
+                hp: 1523000,
+                race: "Formless",
+                property: "Shadow",
+                size: "Medium",
+                respawn_time: "150",
+                image: "https://file5s.ratemyserver.net/mobs/1734.gif"
+            },
+            {
+                name: "Kraken",
+                hp: 5602800,
+                race: "Fish",
+                property: "Water",
+                size: "Large",
+                respawn_time: "135",
+                image: "https://file5s.ratemyserver.net/mobs/2202.gif"
+            },
+            {
+                name: "Ktullanux",
+                hp: 4417000,
+                race: "Brute",
+                property: "Water",
+                size: "Large",
+                respawn_time: "None",
+                image: "https://file5s.ratemyserver.net/mobs/1779.gif"
+            },
+            {
+                name: "Lord Knight Seyren",
+                hp: 1647590,
+                race: "Demi-Human",
+                property: "Fire",
+                size: "Medium",
+                respawn_time: "115",
+                image: "https://file5s.ratemyserver.net/mobs/1646.gif"
+            },
+
+            {
+                name: "Stormy Knight",
+                hp: 240000,
+                race: "Formless",
+                property: "Wind",
+                size: "Large",
+                respawn_time: "65",
+                image: "https://file5s.ratemyserver.net/mobs/1251.gif"
+            },
+
+            {
+                name: "Lord of Death",
+                hp: 603383,
+                race: "Demon",
+                property: "Shadow",
+                size: "Large",
+                respawn_time: "133",
+                image: "https://file5s.ratemyserver.net/mobs/1373.gif"
+            },
+            {
+                name: "Eddga",
+                hp: 152000,
+                race: "Brute",
+                property: "Fire",
+                size: "Large",
+                respawn_time: "125",
+                image: "https://file5s.ratemyserver.net/mobs/1115.gif"
+            },
+            {
+                name: "Lost Dragon",
+                hp: 608920,
+                race: "Dragon",
+                property: "Shadow",
+                size: "Large",
+                respawn_time: "None",
+                image: "https://file5s.ratemyserver.net/mobs/2131.gif"
+            },
+            {
+                name: "Maya",
+                hp: 169000,
+                race: "Insect",
+                property: "Earth",
+                size: "Large",
+                respawn_time: "125",
+                image: "https://file5s.ratemyserver.net/mobs/1147.gif"
+            },
+            {
+                name: "Mistress",
+                hp: 212000,
+                race: "Insect",
+                property: "Wind",
+                size: "Small",
+                respawn_time: "125",
+                image: "https://file5s.ratemyserver.net/mobs/1059.gif"
+            },
+
+            {
+                name: "Lady Tanee",
+                hp: 493000,
+                race: "Plant",
+                property: "Wind",
+                size: "Large",
+                respawn_time: "425",
+                image: "https://file5s.ratemyserver.net/mobs/1688.gif"
+            },
+            {
+                name: "Leak",
+                hp: 1266000,
+                race: "Demon",
+                property: "Shadow",
+                size: "Large",
+                respawn_time: "120",
+                image: "https://file5s.ratemyserver.net/mobs/2156.gif"
+            },
+            {
+                name: "Egnigem Cenia",
+                hp: 214200,
+                race: "Demi-Human",
+                property: "Fire",
+                size: "Medium",
+                respawn_time: "125",
+                image: "https://file5s.ratemyserver.net/mobs/1658.gif"
+            },
+
+{
+                name: "Wounded Morroc",
+                hp: 8388607,
+                race: "Demon",
+                property: "Shadow",
+                size: "Large",
+                respawn_time: "750",
+                image: "https://file5s.ratemyserver.net/mobs/1917.gif"
+            },
+
+{
+                name: "Whitesmith Howard",
+                hp: 1460000,
+                race: "Demi-Human",
+                property: "Earth",
+                size: "Medium",
+                respawn_time: "115",
+                image: "https://file5s.ratemyserver.net/mobs/1648.gif"
+            },
+
+{
+                name: "Vesper",
+                hp: 640700,
+                race: "Brute",
+                property: "Holy",
+                size: "Large",
+                respawn_time: "125",
+                image: "https://file5s.ratemyserver.net/mobs/1685.gif"
+            },
+{
+                name: "Valkyrie Randgris",
+                hp: 3567200,
+                race: "Angel",
+                property: "Holy",
+                size: "Large",
+                respawn_time: "185",
+                image: "https://file5s.ratemyserver.net/mobs/1751.gif"
+            },
+{
+                name: "Turtle General",
+                hp: 320700,
+                race: "Brute",
+                property: "Earth",
+                size: "Large",
+                respawn_time: "65",
+                image: "https://file5s.ratemyserver.net/mobs/1312.gif"
+            },
+{
+                name: "Thanatos",
+                hp: 445660,
+                race: "Demon",
+                property: "Ghost",
+                size: "Large",
+                respawn_time: "None",
+                image: "https://file5s.ratemyserver.net/mobs/1708.gif"
+            },
+{
+                name: "Tao Gunka",
+                hp: 193000,
+                race: "Demon",
+                property: "Neutral",
+                size: "Large",
+                respawn_time: "305",
+                image: "https://file5s.ratemyserver.net/mobs/1583.gif"
+            },
+
+{
+                name: "Stalker Gertie",
+                hp: 4057279,
+                race: "Demon",
+                property: "Poison",
+                size: "Medium",
+                respawn_time: "115",
+                image: "https://file5s.ratemyserver.net/mobs/2239.gif"
+            },
+
+{
+                name: "Sniper Cecil",
+                hp: 1349000,
+                race: "Demi-Human",
+                property: "Wind",
+                size: "Medium",
+                respawn_time: "115",
+                image: "https://file5s.ratemyserver.net/mobs/1650.gif"
+            },
+
+{
+                name: "RSX 0806",
+                hp: 560733,
+                race: "Formless",
+                property: "Neutral",
+                size: "Large",
+                respawn_time: "130",
+                image: "https://file5s.ratemyserver.net/mobs/1623.gif"
+            },
+{
+                name: "Root of Corruption",
+                hp: 3190000,
+                race: "Demi-Human",
+                property: "Earth",
+                size: "Large",
+                respawn_time: "None",
+                image: "https://file5s.ratemyserver.net/mobs/2475.gif"
+            },
+{
+                name: "Queen Scaraba",
+                hp: 2441600,
+                race: "Insect",
+                property: "Earth",
+                size: "Large",
+                respawn_time: "120",
+                image: "https://file5s.ratemyserver.net/mobs/2087.gif"
+            },
+{
+                name: "Professor Celia",
+                hp: 3847804,
+                race: "Demi-Human",
+                property: "Ghost",
+                size: "Medium",
+                respawn_time: "115",
+                image: "https://file5s.ratemyserver.net/mobs/2237.gif"
+            },
+{
+                name: "Pori Pori",
+                hp: 95000000,
+                race: "Plant",
+                property: "Poison",
+                size: "Medium",
+                respawn_time: "None",
+                image: "https://file5s.ratemyserver.net/mobs/1502.gif"
+            },
+{
+                name: "Phreeoni",
+                hp: 188000,
+                race: "Brute",
+                property: "Neutral",
+                size: "Large",
+                respawn_time: "125",
+                image: "https://file5s.ratemyserver.net/mobs/1159.gif"
+            },
+{
+                name: "Pharaoh",
+                hp: 445997,
+                race: "Demi-Human",
+                property: "Shadow",
+                size: "Large",
+                respawn_time: "65",
+                image: "https://file5s.ratemyserver.net/mobs/1157.gif"
+            },
+{
+                name: "Paladin Randel",
+                hp: 6870000,
+                race: "Demi-Human",
+                property: "Holy",
+                size: "Medium",
+                respawn_time: "115",
+                image: "https://file5s.ratemyserver.net/mobs/2235.gif"
+            },
+{
+                name: "Osiris",
+                hp: 415400,
+                race: "Undead",
+                property: "Undead",
+                size: "Medium",
+                respawn_time: "65",
+                image: "https://file5s.ratemyserver.net/mobs/1038.gif"
+            },
+{
+                name: "Orc Lord",
+                hp: 783000,
+                race: "Demi-Human",
+                property: "Earth",
+                size: "Large",
+                respawn_time: "125",
+                image: "https://file5s.ratemyserver.net/mobs/1190.gif"
+            },
+{
+                name: "Orc Hero",
+                hp: 585700,
+                race: "Demi-Human",
+                property: "Earth",
+                size: "Large",
+                respawn_time: "65",
+                image: "https://file5s.ratemyserver.net/mobs/1087.gif"
+            },
+{
+                name: "Nightmare Amon Ra",
+                hp: 2515784,
+                race: "Demi-Human",
+                property: "Earth",
+                size: "Large",
+                respawn_time: "65",
+                image: "https://file5s.ratemyserver.net/mobs/2362.gif"
+            },
+{
+                name: "Nidhoggr's Shadow",
+                hp: 3450000,
+                race: "Dragon",
+                property: "Shadow",
+                size: "Large",
+                respawn_time: "None",
+                image: "https://file5s.ratemyserver.net/mobs/2022.gif"
+            },
+{
+                name: "Moonlight Flower",
+                hp: 120000,
+                race: "Demon",
+                property: "Fire",
+                size: "Medium",
+                respawn_time: "65",
+                image: "https://file5s.ratemyserver.net/mobs/1150.gif"
+            }
+
+
+            // Add more MVPs as needed...
+        ];
+
+        // Randomly select an MVP as the answer
+        var answer = characters[Math.floor(Math.random() * characters.length)];
+
+        var guessInput = document.getElementById('guess-input');
+        var cluesDiv = document.getElementById('clues');
+        var characterImage = document.getElementById('character-image');
+        var guessedCharacters = [];
+
+        function autocomplete(inp, arr) {
+    var currentFocus;
+
+    // Event listener for input changes
+    inp.addEventListener("input", function(e) {
+        var a, b, i, val = this.value;
+
+        // Close any already open lists
+        closeAllLists();
+        if (!val) { return false; }
+
+        currentFocus = -1;
+
+        // Create a DIV element to contain the items
+        a = document.createElement("DIV");
+        a.setAttribute("id", this.id + "autocomplete-list");
+        a.setAttribute("class", "autocomplete-items");
+
+        // Append the DIV to the parent container
+        this.parentNode.appendChild(a);
+        
+        let maxSuggestions = 10;
+        let count = 0;
+
+        // Loop through the array of items
+        for (i = 0; i < arr.length; i++) {
+            // Skip if the character has already been guessed
+            if (guessedCharacters.includes(arr[i].name)) {
+                continue;
+            }
+
+            let name = arr[i].name;
+
+            // Check if the item starts with the same letters as the text field value
+            if (name.toLowerCase().startsWith(val.toLowerCase())) {
+                // Create a DIV element for each matching element
+                b = document.createElement("DIV");
+                b.classList.add("autocomplete-item");
+
+                // Make the matching letters bold
+                let highlightedName = "<strong>" + name.substr(0, val.length) + "</strong>" + name.substr(val.length);
+
+                // Set the inner HTML to include the image and highlighted name
+                b.innerHTML = "<img src='" + arr[i].image + "' alt='" + arr[i].name + "'>";
+                b.innerHTML += highlightedName;
+
+                // Insert a hidden input field to hold the current item's value
+                b.innerHTML += "<input type='hidden' value='" + arr[i].name + "'>";
+                
+                // Event listener for click on the item
+                b.addEventListener("click", function(e) {
+                    // Insert the value into the input field
+                    inp.value = this.getElementsByTagName("input")[0].value;
+
+                    // Close the list of autocompleted values
+                    closeAllLists();
+
+                    // Call checkGuess() to process the guess
+                    checkGuess();
+                });
+                
+                a.appendChild(b);
+                count++;
+
+                // Limit the number of suggestions
+                if (count >= maxSuggestions) {
+                    break;
+                }
+            }
+        }
+    });
+
+    // Event listener for key presses
+    inp.addEventListener("keydown", function(e) {
+        var x = document.getElementById(this.id + "autocomplete-list");
+        if (x) x = x.getElementsByClassName("autocomplete-item");
+
+        if (e.keyCode == 40) {
+            // Down key pressed
+            currentFocus++;
+            addActive(x);
+        } else if (e.keyCode == 38) {
+            // Up key pressed
+            currentFocus--;
+            addActive(x);
+        } else if (e.keyCode == 13) {
+            // Enter key pressed
+            e.preventDefault();
+            if (currentFocus > -1) {
+                // Simulate a click on the active item
+                if (x) x[currentFocus].click();
+            } else {
+                // If no active item, check the guess directly
+                checkGuess();
+            }
+        }
+    });
+
+    function addActive(x) {
+        // Function to classify an item as "active"
+        if (!x) return false;
+        removeActive(x);
+
+        if (currentFocus >= x.length) currentFocus = 0;
+        if (currentFocus < 0) currentFocus = (x.length - 1);
+
+        x[currentFocus].classList.add("autocomplete-active");
+    }
+
+    function removeActive(x) {
+        // Function to remove the "active" class from all autocomplete items
+        for (var i = 0; i < x.length; i++) {
+            x[i].classList.remove("autocomplete-active");
+        }
+    }
+
+    function closeAllLists(elmnt) {
+        // Close all autocomplete lists except the one passed as an argument
+        var x = document.getElementsByClassName("autocomplete-items");
+        for (var i = 0; i < x.length; i++) {
+            if (elmnt != x[i] && elmnt != inp) {
+                x[i].parentNode.removeChild(x[i]);
+            }
+        }
+    }
+
+    // Close the autocomplete list when clicking outside of it
+    document.addEventListener("click", function (e) {
+        closeAllLists(e.target);
+    });
+}
+
+autocomplete(guessInput, characters);
+
+        function compareRespawnTime(guessedTime, correctTime) {
+            
+            if (guessedTime < correctTime) {
+                return " ↑";
+            } else if (guessedTime > correctTime) {
+                return " ↓";
+            } else {
+                return "";
+            }
+        }
+
+        function checkGuess() {
+            var guessName = guessInput.value.trim();
+            var guessedCharacter = characters.find(function(char) {
+                return char.name.toLowerCase() === guessName.toLowerCase();
+            });
+
+            // Clear the input field
+            guessInput.value = '';
+
+
+            // Add the guessed character's name to the guessedCharacters array
+            guessedCharacters.push(guessedCharacter.name);
+
+            // Create a new container for this guess
+            var guessContainer = document.createElement('div');
+            guessContainer.classList.add('guess-container');
+            guessContainer.style.display = 'flex';
+            guessContainer.style.alignItems = 'center';
+            guessContainer.style.marginBottom = '20px';
+
+            // Create image element
+            var characterImage = document.createElement('img');
+            characterImage.src = guessedCharacter.image;
+            characterImage.alt = guessedCharacter.name;
+            characterImage.classList.add('character-image');
+            characterImage.style.width = '100px';
+            characterImage.style.height = '100px';
+            characterImage.style.objectFit = 'cover';
+            characterImage.style.borderRadius = '10px';
+            characterImage.style.marginRight = '20px';
+
+            // Create a container for the clues
+            var cluesDiv = document.createElement('div');
+            cluesDiv.style.display = 'grid';
+            cluesDiv.style.gridTemplateColumns = 'repeat(5, 1fr)';
+            cluesDiv.style.gap = '10px';
+
+            // Check if the guess is correct
+            var isCorrect = guessedCharacter.name === answer.name;
+
+            // Create clues and set their animations
+            var clues = [
+                {
+                    text: "HP: " + guessedCharacter.hp + (guessedCharacter.hp !== answer.hp ? (guessedCharacter.hp < answer.hp ? " ↑" : " ↓") : ""),
+                    match: guessedCharacter.hp === answer.hp
+                },
+                {
+                    text: "Race: " + guessedCharacter.race,
+                    match: guessedCharacter.race === answer.race
+                },
+                {
+                    text: "Property: " + guessedCharacter.property,
+                    match: guessedCharacter.property === answer.property
+                },
+                {
+                    text: "Size: " + guessedCharacter.size,
+                    match: guessedCharacter.size === answer.size
+                },
+                {
+                    text: "Respawn Time: " + guessedCharacter.respawn_time + (guessedCharacter.respawn_time !== answer.respawn_time ? (compareRespawnTime(guessedCharacter.respawn_time, answer.respawn_time)) : ""),
+                    match: guessedCharacter.respawn_time === answer.respawn_time
+                }
+            ];
+
+            clues.forEach((clue, index) => {
+                var clueBox = document.createElement('div');
+                clueBox.classList.add('clue-box');
+                clueBox.innerHTML = clue.text;
+                if (isCorrect || clue.match) {
+                    clueBox.classList.add('green');
+                } else {
+                    clueBox.classList.add('red');
+                }
+                // Add a delay for the animation
+                clueBox.style.animationDelay = `${index * 0.5}s`; // 0.5s delay between each box
+                cluesDiv.appendChild(clueBox);
+            });
+
+            // Add image and clues to the guess container
+            guessContainer.appendChild(characterImage);
+            guessContainer.appendChild(cluesDiv);
+
+            // Add this guess container to the top of the #all-guesses container
+            var allGuessesContainer = document.getElementById('all-guesses');
+            allGuessesContainer.insertBefore(guessContainer, allGuessesContainer.firstChild);
+
+            // Trigger fireworks if the guess is correct
+            if (isCorrect) {
+                setTimeout(() => {
+                    launchFireworks();
+                }, clues.length * 500); // Wait for all animations to finish
+            }
+        }
+
+        // Add an event listener for the Enter key to submit the guess
+        guessInput.addEventListener("keydown", function(e) {
+            if (e.keyCode === 13) { // Enter key
+                e.preventDefault();
+                checkGuess();
+            }
+        });
+
+        // Define the launchFireworks function
+        function launchFireworks() {
+            var duration = 5 * 1000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
+
+            function randomInRange(min, max) {
+                return Math.random() * (max - min) + min;
+            }
+
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                }
+
+                var particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+    </script>
+</body>
+</html>
